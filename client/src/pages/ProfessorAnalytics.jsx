@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 
 import { Activity, CheckCircle2, ClipboardList, FileText } from "lucide-react";
@@ -20,15 +21,19 @@ export default function ProfessorAnalytics() {
   const [data, setData] = useState(null),
     [loading, setLoading] = useState(true),
     [err, setErr] = useState("");
+
   useEffect(() => {
     getProfessorAnalytics()
       .then((r) => setData(r.data))
       .catch((e) => setErr(errorMessage(e)))
       .finally(() => setLoading(false));
   }, []);
+
   if (loading) return <Loader />;
+
   const o = data?.overview || {},
     rows = data?.assignmentAnalytics || [];
+
   return (
     <>
       <PageTitle
@@ -36,7 +41,9 @@ export default function ProfessorAnalytics() {
         title="Analytics"
         subtitle="Understand submission activity across your classes."
       />
+
       <Notice>{err}</Notice>
+
       <div className="stats-grid four">
         <Stat
           label="Total assignments"
@@ -45,6 +52,7 @@ export default function ProfessorAnalytics() {
           tone="blue"
           detail="Created assignments"
         />
+
         <Stat
           label="Eligible submissions"
           value={o.totalEligibleSubmissions || 0}
@@ -52,6 +60,7 @@ export default function ProfessorAnalytics() {
           tone="violet"
           detail="Across all assignments"
         />
+
         <Stat
           label="Confirmed"
           value={o.totalConfirmed || 0}
@@ -59,6 +68,7 @@ export default function ProfessorAnalytics() {
           tone="green"
           detail="Submissions confirmed"
         />
+
         <Stat
           label="Completion rate"
           value={`${o.completionPercentage || 0}%`}
@@ -67,6 +77,7 @@ export default function ProfessorAnalytics() {
           detail={`${o.totalPending || 0} still pending`}
         />
       </div>
+
       <div className="dashboard-grid">
         <Card className="wide chart-card">
           <div className="card-heading">
@@ -74,10 +85,12 @@ export default function ProfessorAnalytics() {
               <h2>Completion by assignment</h2>
               <p>Confirmed student submissions.</p>
             </div>
+
             <span className="chart-legend">
               <i /> Completion
             </span>
           </div>
+
           {rows.length ? (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart
@@ -93,13 +106,16 @@ export default function ProfessorAnalytics() {
                     <stop offset="95%" stopColor="#5b7cfa" stopOpacity={0} />
                   </linearGradient>
                 </defs>
+
                 <CartesianGrid vertical={false} stroke="#edf0f4" />
+
                 <XAxis
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: "#8b94a3" }}
                 />
+
                 <YAxis
                   domain={[0, 100]}
                   axisLine={false}
@@ -107,7 +123,9 @@ export default function ProfessorAnalytics() {
                   tick={{ fontSize: 11, fill: "#8b94a3" }}
                   tickFormatter={(v) => `${v}%`}
                 />
+
                 <Tooltip formatter={(v) => `${v}%`} />
+
                 <Area
                   type="monotone"
                   dataKey="completion"
@@ -125,6 +143,7 @@ export default function ProfessorAnalytics() {
             />
           )}
         </Card>
+
         <Card>
           <div className="card-heading">
             <div>
@@ -132,17 +151,21 @@ export default function ProfessorAnalytics() {
               <p>Overall submissions.</p>
             </div>
           </div>
+
           <div className="big-rate">
             {o.completionPercentage || 0}
             <small>%</small>
           </div>
+
           <div className="progress-track large">
             <i style={{ width: `${o.completionPercentage || 0}%` }} />
           </div>
+
           <div className="rate-caption">
             <span>{o.totalConfirmed || 0} confirmed</span>
             <span>{o.totalPending || 0} pending</span>
           </div>
+
           <div className="analytics-note">
             <CheckCircle2 size={16} />
             <span>
@@ -151,6 +174,8 @@ export default function ProfessorAnalytics() {
           </div>
         </Card>
       </div>
+
+      {/* Assignment Breakdown */}
       <Card className="assignment-table-card analytics-table">
         <div className="table-toolbar">
           <div>
@@ -158,6 +183,7 @@ export default function ProfessorAnalytics() {
             <p>Detailed completion status for each assignment.</p>
           </div>
         </div>
+
         {rows.length ? (
           <div className="table-wrap">
             <table>
@@ -170,6 +196,7 @@ export default function ProfessorAnalytics() {
                   <th>COMPLETION</th>
                 </tr>
               </thead>
+
               <tbody>
                 {rows.map((a) => (
                   <tr key={a.assignmentId}>
@@ -196,6 +223,93 @@ export default function ProfessorAnalytics() {
           <Empty
             title="No assignments to report"
             text="Your assignment analytics will appear here once you create coursework."
+          />
+        )}
+      </Card>
+
+      {/* Individual Student Submission Details */}
+      <Card className="assignment-table-card">
+        <div className="table-toolbar">
+          <div>
+            <h2>Student Submission Details</h2>
+            <p>
+              Individual confirmation status for every assignment.
+            </p>
+          </div>
+        </div>
+
+        {rows.length ? (
+          <div className="space-y-6">
+            {rows.map((assignment) => (
+              <div key={assignment.assignmentId}>
+                <h3 className="mb-3 font-semibold">
+                  {assignment.title}
+                </h3>
+
+                {assignment.studentSubmissions?.length ? (
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>STUDENT</th>
+                          <th>STUDENT ID</th>
+                          <th>STATUS</th>
+                          <th>CONFIRMED AT</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {assignment.studentSubmissions.map((student) => (
+                          <tr key={student.id}>
+                            <td>
+                              <b>{student.name}</b>
+                              <br />
+                              <small>{student.email}</small>
+                            </td>
+
+                            <td>{student.studentId || "—"}</td>
+
+                            <td>
+                              <span
+                                style={{
+                                  color:
+                                    student.status === "SUBMITTED"
+                                      ? "#15803d"
+                                      : "#b45309",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {student.status === "SUBMITTED"
+                                  ? "Submitted"
+                                  : "Pending"}
+                              </span>
+                            </td>
+
+                            <td>
+                              {student.confirmedAt
+                                ? new Date(
+                                    student.confirmedAt
+                                  ).toLocaleString()
+                                : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <Empty
+                    title="No eligible students"
+                    text="No students are currently eligible for this assignment."
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty
+            title="No submission records"
+            text="Create assignments to see individual student submission details."
           />
         )}
       </Card>

@@ -810,11 +810,10 @@ const getProfessorAnalytics = async (req, res) => {
 
     const totalStudents = await prisma.user.count({
       where: { role: "STUDENT" },
-    });
-
+    });  
     const assignmentAnalytics = await Promise.all(
       assignments.map(async (assignment) => {
-        const eligibleStudents = await prisma.user.count({
+        const eligibleStudents = await prisma.user.findMany({
           where: {
             role: "STUDENT",
             ...(assignment.assignToAll
@@ -825,23 +824,67 @@ const getProfessorAnalytics = async (req, res) => {
                   },
                 }),
           },
+          select: {
+            id: true,
+            name: true,
+            studentId: true,
+            email: true,
+          },
+          orderBy: {
+            name: "asc",
+          },
         });
 
-        const confirmed = assignment.confirmations.length;
+        const confirmedRecords = await prisma.submissionConfirmation.findMany({
+          where: {
+            assignmentId: assignment.id,
+            confirmed: true,
+          },
+          select: {
+            studentId: true,
+            confirmedAt: true,
+          },
+        });
+
+        const confirmationMap = new Map(
+          confirmedRecords.map((record) => [
+            record.studentId,
+            record.confirmedAt,
+          ])
+        );
+
+        const studentSubmissions = eligibleStudents.map((student) => {
+          const confirmedAt = confirmationMap.get(student.id);
+
+          return {
+            id: student.id,
+            name: student.name,
+            studentId: student.studentId,
+            email: student.email,
+            status: confirmedAt ? "SUBMITTED" : "PENDING",
+            confirmedAt: confirmedAt || null,
+          };
+        });
+
+        const confirmed = confirmedRecords.length;
 
         return {
           assignmentId: assignment.id,
           title: assignment.title,
-          totalStudents: eligibleStudents,
+          totalStudents: eligibleStudents.length,
           confirmed,
-          pending: Math.max(eligibleStudents - confirmed, 0),
+          pending: Math.max(eligibleStudents.length - confirmed, 0),
           completionPercentage:
-            eligibleStudents === 0
+            eligibleStudents.length === 0
               ? 0
-              : Math.round((confirmed / eligibleStudents) * 100),
+              : Math.round(
+                  (confirmed / eligibleStudents.length) * 100
+                ),
+          studentSubmissions,
         };
       })
     );
+
 
     const totalEligible = assignmentAnalytics.reduce(
       (sum, item) => sum + item.totalStudents,
