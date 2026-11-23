@@ -1,0 +1,96 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  PROFESSOR
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  studentId    String?  @unique
+  password     String
+  role         UserRole @default(STUDENT)
+
+  groupId      Int?
+  group        Group?   @relation(fields: [groupId], references: [id])
+  ledGroups Group[] @relation("GroupLeader")
+
+  createdAssignments Assignment[] @relation("CreatedAssignments")
+  confirmations      SubmissionConfirmation[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Group {
+  id        Int      @id @default(autoincrement())
+  name      String
+  inviteCode String @unique
+
+  leaderId Int
+  leader   User @relation("GroupLeader", fields: [leaderId], references: [id])
+
+  members     User[]
+  assignments AssignmentGroup[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Assignment {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String   @db.Text
+  oneDriveUrl String
+
+  dueDate     DateTime
+  assignToAll Boolean  @default(false)
+
+  professorId Int
+  professor   User     @relation("CreatedAssignments", fields: [professorId], references: [id])
+
+  groups       AssignmentGroup[]
+  confirmations SubmissionConfirmation[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AssignmentGroup {
+  id           Int        @id @default(autoincrement())
+
+  assignmentId Int
+  groupId      Int
+
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  group        Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, groupId])
+}
+
+model SubmissionConfirmation {
+  id            Int      @id @default(autoincrement())
+
+  assignmentId  Int
+  studentId     Int
+
+  confirmed     Boolean  @default(false)
+  confirmedAt   DateTime?
+
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student       User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime @default(now())
+
+  @@unique([assignmentId, studentId])
+}

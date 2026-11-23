@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Build files
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma
+server/prisma/*.db
+server/prisma/*.db-journal
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.vscode/
