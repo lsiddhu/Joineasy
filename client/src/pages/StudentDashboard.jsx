@@ -10,7 +10,10 @@ import {
 
 import { errorMessage } from "../services/api";
 import { getMyGroup } from "../services/groupService";
-import { getStudentAssignments, getGroupProgress } from "../services/assignmentService";
+import {
+  getStudentAssignments,
+  getGroupProgress,
+} from "../services/assignmentService";
 
 import { useAuth } from "../context/AuthContext";
 import Stat from "../components/StatCard";
@@ -57,9 +60,12 @@ export default function StudentDashboard() {
     load();
   }, []);
   const upcoming = data.assignments.slice(0, 3);
-  const myProgress = data.progress?.members?.find((member) => member.id === user?.id);
+  const myProgress = data.progress?.members?.find(
+    (member) => member.id === user?.id,
+  );
   const completed = myProgress?.completedAssignments;
-  const pending = completed == null ? null : Math.max(data.assignments.length - completed, 0);
+  const pending =
+    completed == null ? null : Math.max(data.assignments.length - completed, 0);
   if (loading) return <Loader />;
   return (
     <>
@@ -82,14 +88,22 @@ export default function StudentDashboard() {
           value={completed ?? "—"}
           icon={FileText}
           tone="green"
-          detail={completed == null ? "Group progress unavailable" : "Confirmed for your account"}
+          detail={
+            completed == null
+              ? "Group progress unavailable"
+              : "Confirmed for your account"
+          }
         />
         <Stat
           label="Pending submissions"
           value={pending ?? "—"}
           icon={ClipboardList}
           tone="amber"
-          detail={pending == null ? "Group progress unavailable" : "Awaiting confirmation"}
+          detail={
+            pending == null
+              ? "Group progress unavailable"
+              : "Awaiting confirmation"
+          }
         />
         <Stat
           label="Group progress"
@@ -176,7 +190,10 @@ export default function StudentDashboard() {
                   </small>
                 </div>
               </div>
-              <ProgressBar label="Submission progress" value={data.progress?.progressPercentage ?? 0}/>
+              <ProgressBar
+                label="Submission progress"
+                value={data.progress?.progressPercentage ?? 0}
+              />
               <div className="card-foot-link">
                 <Link to="/student/group">
                   View group details <span>→</span>

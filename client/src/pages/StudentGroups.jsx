@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 import { Plus, Users } from "lucide-react";
 
 import { errorMessage } from "../services/api";
-import { getMyGroup, createGroup, joinGroup, addGroupMember } from "../services/groupService";
+import {
+  getMyGroup,
+  createGroup,
+  joinGroup,
+  addGroupMember,
+} from "../services/groupService";
 import { getGroupProgress } from "../services/assignmentService";
 
 import {
@@ -33,10 +38,7 @@ export default function StudentGroups() {
     });
   const load = async () => {
     setLoading(true);
-    const [g, p] = await Promise.allSettled([
-      getMyGroup(),
-      getGroupProgress(),
-    ]);
+    const [g, p] = await Promise.allSettled([getMyGroup(), getGroupProgress()]);
     setGroup(g.status === "fulfilled" ? g.value.data.group : null);
     setProgress(p.status === "fulfilled" ? p.value.data : null);
     setLoading(false);
@@ -54,7 +56,11 @@ export default function StudentGroups() {
       if (mode === "create") d = (await createGroup(form.name)).data;
       if (mode === "join") d = (await joinGroup(form.inviteCode)).data;
       if (mode === "add")
-        d = (await addGroupMember(form.email ? { email: form.email } : { studentId: form.studentId })).data;
+        d = (
+          await addGroupMember(
+            form.email ? { email: form.email } : { studentId: form.studentId },
+          )
+        ).data;
       setOk(d?.message || "Group updated.");
       setForm({ name: "", inviteCode: "", email: "", studentId: "" });
       setMode("");

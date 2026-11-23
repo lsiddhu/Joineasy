@@ -14,13 +14,7 @@ import { errorMessage } from "../services/api";
 import { getProfessorAnalytics } from "../services/assignmentService";
 import Stat from "../components/StatCard";
 
-import {
-  Notice,
-  Loader,
-  PageTitle,
-  Card,
-  Empty,
-} from "../components/Common";
+import { Notice, Loader, PageTitle, Card, Empty } from "../components/Common";
 
 export default function ProfessorAnalytics() {
   const [data, setData] = useState(null),

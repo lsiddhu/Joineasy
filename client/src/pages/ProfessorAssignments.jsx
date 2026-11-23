@@ -3,9 +3,21 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ClipboardList, FileText, Plus, Search, Settings } from "lucide-react";
 
 import { errorMessage } from "../services/api";
-import { getProfessorAssignments, createAssignment, updateAssignment } from "../services/assignmentService";
+import {
+  getProfessorAssignments,
+  createAssignment,
+  updateAssignment,
+} from "../services/assignmentService";
 
-import { date, Button, Notice, Loader, PageTitle, Card, Empty } from "../components/Common";
+import {
+  date,
+  Button,
+  Notice,
+  Loader,
+  PageTitle,
+  Card,
+  Empty,
+} from "../components/Common";
 import CreateAssignment from "./CreateAssignment";
 
 export default function ProfessorAssignments() {
@@ -225,7 +237,15 @@ export default function ProfessorAssignments() {
         )}
       </Card>
       {editing && (
-        <CreateAssignment editing={editing} form={form} setForm={setForm} groups={groups} busy={busy} onClose={() => setEditing(null)} onSubmit={submit}/>
+        <CreateAssignment
+          editing={editing}
+          form={form}
+          setForm={setForm}
+          groups={groups}
+          busy={busy}
+          onClose={() => setEditing(null)}
+          onSubmit={submit}
+        />
       )}
     </>
   );

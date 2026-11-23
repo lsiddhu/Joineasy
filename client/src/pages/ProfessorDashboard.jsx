@@ -18,7 +18,10 @@ import {
   YAxis,
 } from "recharts";
 import { errorMessage } from "../services/api";
-import { getProfessorAssignments, getProfessorAnalytics } from "../services/assignmentService";
+import {
+  getProfessorAssignments,
+  getProfessorAnalytics,
+} from "../services/assignmentService";
 import Stat from "../components/StatCard";
 
 import {
@@ -37,10 +40,7 @@ export default function ProfessorDashboard() {
     [loading, setLoading] = useState(true),
     [err, setErr] = useState("");
   useEffect(() => {
-    Promise.all([
-      getProfessorAnalytics(),
-      getProfessorAssignments(),
-    ])
+    Promise.all([getProfessorAnalytics(), getProfessorAssignments()])
       .then(([a, b]) => {
         setAnalytics(a.data);
         setAssignments(b.data.assignments || []);

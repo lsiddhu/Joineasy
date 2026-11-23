@@ -24,3 +24,7 @@ server/prisma/*.db-journal
 .DS_Store
 Thumbs.db
 .vscode/
+
+.env.docker
+# Database backups
+*.dump

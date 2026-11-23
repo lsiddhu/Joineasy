@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { ClipboardList } from "lucide-react";
 
 import { errorMessage } from "../services/api";
-import { getStudentAssignments, startSubmission, confirmSubmission } from "../services/assignmentService";
+import {
+  getStudentAssignments,
+  startSubmission,
+  confirmSubmission,
+} from "../services/assignmentService";
 
 import {
   Button,
@@ -26,13 +30,23 @@ export default function StudentAssignments() {
     [step, setStep] = useState(null),
     [filter, setFilter] = useState("all"),
     [submissionStates, setSubmissionStates] = useState(() => {
-      try { return JSON.parse(localStorage.getItem(`joineazy:submissions:${user?.id}`) || "{}") } catch { return {} }
+      try {
+        return JSON.parse(
+          localStorage.getItem(`joineazy:submissions:${user?.id}`) || "{}",
+        );
+      } catch {
+        return {};
+      }
     });
-  const persistState = (id, value) => setSubmissionStates(current => {
-    const next = { ...current, [id]: value };
-    localStorage.setItem(`joineazy:submissions:${user?.id}`, JSON.stringify(next));
-    return next;
-  });
+  const persistState = (id, value) =>
+    setSubmissionStates((current) => {
+      const next = { ...current, [id]: value };
+      localStorage.setItem(
+        `joineazy:submissions:${user?.id}`,
+        JSON.stringify(next),
+      );
+      return next;
+    });
   const load = async () => {
     try {
       const { data } = await getStudentAssignments();
@@ -56,7 +70,10 @@ export default function StudentAssignments() {
       setStep(a);
       setBusy(null);
     } catch (e) {
-      if (e.response?.status === 409 && /already confirmed/i.test(e.response?.data?.message || "")) {
+      if (
+        e.response?.status === 409 &&
+        /already confirmed/i.test(e.response?.data?.message || "")
+      ) {
         persistState(a.id, { status: "CONFIRMED" });
         setBusy(null);
         return;
@@ -69,7 +86,10 @@ export default function StudentAssignments() {
     setBusy(step.id);
     try {
       const { data } = await confirmSubmission(step.id);
-      persistState(step.id, { status: "CONFIRMED", confirmedAt: data.confirmation?.confirmedAt || new Date().toISOString() });
+      persistState(step.id, {
+        status: "CONFIRMED",
+        confirmedAt: data.confirmation?.confirmedAt || new Date().toISOString(),
+      });
       setStep(null);
       await load();
     } catch (e) {
@@ -138,7 +158,12 @@ export default function StudentAssignments() {
           />
         </Card>
       )}
-      <ConfirmModal assignment={step} busy={!!busy} onClose={() => setStep(null)} onConfirm={confirm}/>
+      <ConfirmModal
+        assignment={step}
+        busy={!!busy}
+        onClose={() => setStep(null)}
+        onConfirm={confirm}
+      />
     </>
   );
 }

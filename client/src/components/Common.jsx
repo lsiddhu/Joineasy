@@ -1,9 +1,4 @@
-import {
-  X,
-  LoaderCircle,
-  FileText,
-  ExternalLink,
-} from "lucide-react";
+import { X, LoaderCircle, FileText, ExternalLink } from "lucide-react";
 export const routes = {
   STUDENT: "/student/dashboard",
   PROFESSOR: "/professor/dashboard",
@@ -81,7 +76,13 @@ export function Field({ label, children, hint }) {
   );
 }
 
-export function AssignmentCard({ assignment: a, start, busy, status = "NOT_STARTED", confirmedAt }) {
+export function AssignmentCard({
+  assignment: a,
+  start,
+  busy,
+  status = "NOT_STARTED",
+  confirmedAt,
+}) {
   const confirmed = status === "CONFIRMED";
   const pending = status === "PENDING";
   return (
@@ -95,7 +96,11 @@ export function AssignmentCard({ assignment: a, start, busy, status = "NOT_START
         >
           {confirmed
             ? "Confirmed"
-            : pending ? "Pending confirmation" : new Date(a.dueDate) < new Date() ? "Past due" : "Not started"}
+            : pending
+              ? "Pending confirmation"
+              : new Date(a.dueDate) < new Date()
+                ? "Past due"
+                : "Not started"}
         </span>
       </div>
       <h3>{a.title}</h3>
@@ -112,7 +117,11 @@ export function AssignmentCard({ assignment: a, start, busy, status = "NOT_START
                 .join(", ") || "Your group"}
         </span>
       </div>
-      {confirmedAt && <div className="assignment-meta confirmation-time">Confirmed {new Date(confirmedAt).toLocaleString()}</div>}
+      {confirmedAt && (
+        <div className="assignment-meta confirmation-time">
+          Confirmed {new Date(confirmedAt).toLocaleString()}
+        </div>
+      )}
       <div className="assignment-actions">
         <a
           href={a.oneDriveUrl}
@@ -123,7 +132,13 @@ export function AssignmentCard({ assignment: a, start, busy, status = "NOT_START
           Open OneDrive <ExternalLink size={15} />
         </a>
         <Button disabled={confirmed || busy} onClick={start}>
-          {busy ? "Starting…" : confirmed ? "Submitted" : pending ? "Continue confirmation" : "Yes, I have submitted"}
+          {busy
+            ? "Starting…"
+            : confirmed
+              ? "Submitted"
+              : pending
+                ? "Continue confirmation"
+                : "Yes, I have submitted"}
         </Button>
       </div>
     </Card>

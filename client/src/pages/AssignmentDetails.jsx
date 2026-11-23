@@ -101,7 +101,14 @@ export default function AssignmentDetails() {
                   <Users size={16} />
                   {g.groupName}
                 </span>
-                <ProgressBar value={g.totalStudents ? (g.confirmedStudents / g.totalStudents) * 100 : 0} label={`${g.confirmedStudents}/${g.totalStudents} confirmed`}/>
+                <ProgressBar
+                  value={
+                    g.totalStudents
+                      ? (g.confirmedStudents / g.totalStudents) * 100
+                      : 0
+                  }
+                  label={`${g.confirmedStudents}/${g.totalStudents} confirmed`}
+                />
               </div>
             ))}
           </div>
