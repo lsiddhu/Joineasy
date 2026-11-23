@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 5001
 
 # Apply migrations before starting the server
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seedProfessor.js && npm start"]
