@@ -5,7 +5,7 @@ Joineazy is a full-stack web application designed to simplify student group mana
 ## Project Links
 
 - **GitHub Repository:** https://github.com/lsiddhu/Joineasy
-- **Live Demo:** To be added
+- Live Demo: https://joineasy-liard.vercel.app/
 - **Frontend Deployment:** To be added
 - **Backend Deployment:** To be added
 
