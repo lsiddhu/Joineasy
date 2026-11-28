@@ -391,8 +391,8 @@ Docker Compose starts three services:
 
 | Service | Container | Host Port |
 |---|---|---:|
-| Frontend + Nginx | joineazy-client | 8081 |
-| Backend | joineazy-server | 5001 |
+| Frontend + Nginx | joineazy-client | 8083 |
+| Backend | joineazy-server | 5005 |
 | PostgreSQL | joineazy-db | 5433 |
 
 The backend automatically runs Prisma migrations during container startup.
@@ -413,9 +413,9 @@ Skip this step if the Professor account already exists.
 
 | Component | URL |
 |---|---|
-| Frontend | http://localhost:8081 |
-| Backend Health Check | http://localhost:5001/api/health |
-| Frontend API Proxy Health Check | http://localhost:8081/api/health |
+| Frontend | http://localhost:8083 |
+| Backend Health Check | http://localhost:5005/api/health |
+| Frontend API Proxy Health Check | http://localhost:8083/api/health |
 
 Register a new student account or log in using the seeded Professor account.
 
