@@ -242,6 +242,18 @@ const enrollInCourse = async (req, res) => {
       });
     }
 
+    // JWTs contain the user's ID and role, but not their name.
+    const student = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { name: true },
+    });
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student account was not found",
+      });
+    }
+
     const enrollment = await prisma.courseEnrollment.upsert({
       where: {
         courseId_studentId: {
@@ -251,7 +263,7 @@ const enrollInCourse = async (req, res) => {
       },
       update: {},
       create: {
-        name: req.user.name,
+        name: student.name,
         courseId: course.id,
         studentId: req.user.id,
       },
