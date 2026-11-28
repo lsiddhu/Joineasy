@@ -30,7 +30,7 @@ services:
       PROFESSOR_EMAIL: ${PROFESSOR_EMAIL}
       PROFESSOR_PASSWORD: ${PROFESSOR_PASSWORD}
     ports:
-      - "5001:5001"
+      - "5005:5001"
     depends_on:
       db:
         condition: service_healthy
@@ -43,7 +43,7 @@ services:
     container_name: joineazy-client
     restart: unless-stopped
     ports:
-      - "8081:80"
+      - "8083:80"
     depends_on:
       - server
 
