@@ -41,6 +41,7 @@ The application supports exactly two roles.
 - Open assignment resources through OneDrive.
 - Complete the two-step submission confirmation process.
 - View group submission progress.
+- Enroll in courses using a course code and view enrolled courses.
 
 **Group restriction:** Each student can belong to only one group, and each group can contain a maximum of four students.
 
@@ -54,6 +55,7 @@ The application supports exactly two roles.
 - Track student submission confirmation statuses.
 - Monitor group-wise submission progress.
 - View overall and assignment-level analytics.
+- Create and manage courses, then organize assignments by course.
 
 ## Core Features
 
@@ -83,6 +85,14 @@ The application supports exactly two roles.
 - Store OneDrive resource links.
 - Set assignment deadlines.
 - Display assignments according to student eligibility.
+- Support individual or group submission workflows and optional course association.
+
+### Course Management
+
+- Professors can create courses and share their unique course codes with students.
+- Students can enroll using a course code and view the courses they have joined.
+- Each course enrollment stores the student's name alongside the course and student IDs. Existing enrollments are populated from the associated student account during migration.
+- Professors can view course details, enrollment counts, and course assignment analytics.
 
 ### Two-Step Submission Confirmation
 
@@ -156,6 +166,8 @@ The database uses PostgreSQL with Prisma ORM.
 | User | Stores student and professor account information |
 | Group | Stores group details, invitation codes, and group leaders |
 | Assignment | Stores assignment details, deadlines, and professor ownership |
+| Course | Stores course details, unique enrollment code, and professor ownership |
+| CourseEnrollment | Connects students to courses and stores the enrolled student's name |
 | AssignmentGroup | Connects assignments with their target groups |
 | SubmissionConfirmation | Stores student assignment confirmation status and timestamps |
 
@@ -166,6 +178,10 @@ erDiagram
     User ||--o{ Group : leads
     User }o--o| Group : belongs_to
     User ||--o{ Assignment : creates
+    User ||--o{ Course : teaches
+    Course ||--o{ CourseEnrollment : has
+    User ||--o{ CourseEnrollment : enrolls
+    Course o|--o{ Assignment : organizes
     Group ||--o{ AssignmentGroup : receives
     Assignment ||--o{ AssignmentGroup : targets
     User ||--o{ SubmissionConfirmation : submits
@@ -195,7 +211,25 @@ erDiagram
         string oneDriveUrl
         datetime dueDate
         boolean assignToAll
+        enum submissionType
+        int courseId FK
         int professorId FK
+    }
+
+    Course {
+        int id PK
+        string name
+        string code UK
+        text description
+        int professorId FK
+    }
+
+    CourseEnrollment {
+        int id PK
+        string name
+        int courseId FK
+        int studentId FK
+        datetime enrolledAt
     }
 
     AssignmentGroup {
@@ -275,6 +309,15 @@ Protected endpoints require a JWT access token:
 | POST | `/api/groups/join` | Student | Join using invitation code |
 | GET | `/api/groups/my-group` | Student | Retrieve current group |
 | POST | `/api/groups/add-member` | Student | Add a group member |
+
+### Course APIs
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/api/courses` | Student, Professor | List courses available to the current user |
+| GET | `/api/courses/:id` | Student, Professor | Get course details |
+| POST | `/api/courses` | Professor | Create a course |
+| POST | `/api/courses/enroll` | Student | Enroll using `{ "code": "COURSECODE" }`; returns the enrollment, including the stored student name |
 
 ### Assignment APIs
 
