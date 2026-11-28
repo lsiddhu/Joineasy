@@ -23,6 +23,7 @@ export default function Sidebar({ role, mobile, onNavigate }) {
       ]
     : [
         ["/professor/dashboard", "Overview", Gauge],
+        ["/professor/courses", "Courses", BookOpen],
         ["/professor/assignments", "Assignments", ClipboardList],
         ["/professor/analytics", "Analytics", Activity],
       ];

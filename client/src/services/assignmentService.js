@@ -1,6 +1,9 @@
 import api from "./api";
 export const getProfessorAssignments = () => api.get("/assignments/");
-export const getStudentAssignments = () => api.get("/assignments/student");
+export const getStudentAssignments = (courseId) =>
+  api.get("/assignments/student", {
+    params: courseId ? { courseId } : undefined,
+  });
 export const getGroupProgress = () =>
   api.get("/assignments/student/group-progress");
 export const createAssignment = (payload) => api.post("/assignments/", payload);

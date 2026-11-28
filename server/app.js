@@ -1,21 +1,20 @@
-
 const express = require("express");
 const cors = require("cors");
 const prisma = require("./config/db");
 
 const app = express();
 const authRoutes = require("./routes/authRoutes");
-const grouppRoutes=require("./routes/groupRoutes");
-const assignmentRoutes=require("./routes/assignmentRoutes")
-
+const grouppRoutes = require("./routes/groupRoutes");
+const assignmentRoutes = require("./routes/assignmentRoutes");
+const courseRoutes = require("./routes/courseRoutes");
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
-app.use("/api/groups",grouppRoutes);
-app.use("/api/assignments", assignmentRoutes)
-
+app.use("/api/groups", grouppRoutes);
+app.use("/api/assignments", assignmentRoutes);
+app.use("/api/courses", courseRoutes);
 
 // Basic API route
 app.get("/", (req, res) => {

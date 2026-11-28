@@ -12,6 +12,7 @@ export default function Navbar({ role, user, onMenuClick }) {
         ]
       : [
           ["/professor/dashboard", "Overview"],
+          ["/professor/courses", "Courses"],
           ["/professor/assignments", "Assignments"],
           ["/professor/analytics", "Analytics"],
         ];

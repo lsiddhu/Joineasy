@@ -5,6 +5,7 @@ export default function CreateAssignment({
   form,
   setForm,
   groups,
+  courses,
   busy,
   onClose,
   onSubmit,
@@ -15,6 +16,29 @@ export default function CreateAssignment({
       close={onClose}
     >
       <form className="form modal-form" onSubmit={onSubmit}>
+        <Field label="Course">
+          <select
+            required={editing === "new"}
+            value={form.courseId}
+            onChange={(event) =>
+              setForm({ ...form, courseId: event.target.value })
+            }
+          >
+            <option value="">
+              {editing === "new"
+                ? "Choose a course"
+                : "Unlinked legacy assignment"}
+            </option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.name}
+              </option>
+            ))}
+          </select>
+          {!courses.length && editing === "new" && (
+            <small>Create a course before creating an assignment.</small>
+          )}
+        </Field>
         <Field label="Assignment title">
           <input
             required
@@ -69,6 +93,33 @@ export default function CreateAssignment({
               Selected groups
             </label>
           </div>
+        </Field>
+        <Field label="Submission type">
+          <div className="radio-stack">
+            <label>
+              <input
+                type="radio"
+                name="submissionType"
+                checked={form.submissionType === "INDIVIDUAL"}
+                onChange={() =>
+                  setForm({ ...form, submissionType: "INDIVIDUAL" })
+                }
+              />
+              Individual
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="submissionType"
+                checked={form.submissionType === "GROUP"}
+                onChange={() => setForm({ ...form, submissionType: "GROUP" })}
+              />
+              Group submission
+            </label>
+          </div>
+          <small>
+            Group submissions can be acknowledged by the group leader.
+          </small>
         </Field>
         {!form.assignToAll && (
           <div className="group-select">

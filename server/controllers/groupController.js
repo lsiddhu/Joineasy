@@ -197,7 +197,7 @@ const joinGroup = async (req, res) => {
       },
       {
         isolationLevel: "Serializable",
-      }
+      },
     );
 
     return res.status(result.status).json(result.body);
@@ -296,10 +296,7 @@ const addMember = async (req, res) => {
     const leaderId = req.user.id;
 
     // Require exactly one identifier
-    if (
-      (!email && !targetStudentId) ||
-      (email && targetStudentId)
-    ) {
+    if ((!email && !targetStudentId) || (email && targetStudentId)) {
       return res.status(400).json({
         success: false,
         message: "Provide either student email or student ID",
@@ -432,7 +429,7 @@ const addMember = async (req, res) => {
       },
       {
         isolationLevel: "Serializable",
-      }
+      },
     );
 
     return res.status(result.status).json(result.body);
@@ -453,5 +450,36 @@ const addMember = async (req, res) => {
   }
 };
 
+const getAllGroups = async (_req, res) => {
+  try {
+    const groups = await prisma.group.findMany({
+      include: {
+        leader: {
+          select: { id: true, name: true, email: true, studentId: true },
+        },
+        members: {
+          select: { id: true, name: true, email: true, studentId: true },
+          orderBy: { name: "asc" },
+        },
+        _count: { select: { members: true } },
+      },
+      orderBy: { name: "asc" },
+    });
 
-module.exports = { createGroup, joinGroup, getMyGroup, addMember };
+    return res.status(200).json({ success: true, groups });
+  } catch (error) {
+    console.error("List groups error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch groups",
+    });
+  }
+};
+
+module.exports = {
+  createGroup,
+  joinGroup,
+  getMyGroup,
+  addMember,
+  getAllGroups,
+};

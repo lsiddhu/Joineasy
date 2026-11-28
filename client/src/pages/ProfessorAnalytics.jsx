@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 
 import { Activity, CheckCircle2, ClipboardList, FileText } from "lucide-react";
@@ -232,9 +231,7 @@ export default function ProfessorAnalytics() {
         <div className="table-toolbar">
           <div>
             <h2>Student Submission Details</h2>
-            <p>
-              Individual confirmation status for every assignment.
-            </p>
+            <p>Individual confirmation status for every assignment.</p>
           </div>
         </div>
 
@@ -242,9 +239,7 @@ export default function ProfessorAnalytics() {
           <div className="space-y-6">
             {rows.map((assignment) => (
               <div key={assignment.assignmentId}>
-                <h3 className="mb-3 font-semibold">
-                  {assignment.title}
-                </h3>
+                <h3 className="mb-3 font-semibold">{assignment.title}</h3>
 
                 {assignment.studentSubmissions?.length ? (
                   <div className="table-wrap">
@@ -287,9 +282,7 @@ export default function ProfessorAnalytics() {
 
                             <td>
                               {student.confirmedAt
-                                ? new Date(
-                                    student.confirmedAt
-                                  ).toLocaleString()
+                                ? new Date(student.confirmedAt).toLocaleString()
                                 : "—"}
                             </td>
                           </tr>

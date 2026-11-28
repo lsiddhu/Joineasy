@@ -1,4 +1,5 @@
 import api from "./api";
+export const getAllGroups = () => api.get("/groups");
 export const getMyGroup = () => api.get("/groups/my-group");
 export const createGroup = (name) => api.post("/groups/", { name });
 export const joinGroup = (inviteCode) =>

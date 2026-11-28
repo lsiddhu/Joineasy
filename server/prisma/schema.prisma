@@ -1,6 +1,6 @@
-
 generator client {
   provider = "prisma-client-js"
+  output   = "../generated/client"
 }
 
 datasource db {
@@ -13,84 +13,133 @@ enum UserRole {
   PROFESSOR
 }
 
+enum SubmissionType {
+  INDIVIDUAL
+  GROUP
+}
+
 model User {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
-  studentId    String?  @unique
-  password     String
-  role         UserRole @default(STUDENT)
+  id                        Int                      @id @default(autoincrement())
+  name                      String
+  email                     String                   @unique
+  studentId                 String?                  @unique
+  password                  String
+  role                      UserRole                 @default(STUDENT)
+  groupId                   Int?
+  group                     Group?                   @relation(fields: [groupId], references: [id])
+  ledGroups                 Group[]                  @relation("GroupLeader")
+  enrollments               CourseEnrollment[]
+  coursesTaught             Course[]                 @relation("TaughtCourses")
+  createdAssignments        Assignment[]             @relation("CreatedAssignments")
+  confirmations             SubmissionConfirmation[]
+  startedGroupSubmissions   GroupSubmission[]        @relation("GroupSubmissionStartedBy")
+  confirmedGroupSubmissions GroupSubmission[]        @relation("GroupSubmissionConfirmedBy")
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+}
 
-  groupId      Int?
-  group        Group?   @relation(fields: [groupId], references: [id])
-  ledGroups Group[] @relation("GroupLeader")
+model Course {
+  id          Int                @id @default(autoincrement())
+  name        String
+  code        String             @unique
+  description String?            @db.Text
+  professorId Int
+  professor   User               @relation("TaughtCourses", fields: [professorId], references: [id], onDelete: Cascade)
+  students    CourseEnrollment[]
+  assignments Assignment[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
-  createdAssignments Assignment[] @relation("CreatedAssignments")
-  confirmations      SubmissionConfirmation[]
+  @@index([professorId])
+}
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model CourseEnrollment {
+  id         Int      @id @default(autoincrement())
+  name       String
+  courseId   Int
+  studentId  Int
+  enrolledAt DateTime @default(now())
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student    User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, studentId])
+  @@index([studentId])
 }
 
 model Group {
-  id        Int      @id @default(autoincrement())
-  name      String
-  inviteCode String @unique
-
-  leaderId Int
-  leader   User @relation("GroupLeader", fields: [leaderId], references: [id])
-
+  id          Int               @id @default(autoincrement())
+  name        String
+  inviteCode  String            @unique
+  leaderId    Int
+  leader      User              @relation("GroupLeader", fields: [leaderId], references: [id])
   members     User[]
   assignments AssignmentGroup[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  submissions GroupSubmission[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }
 
 model Assignment {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String   @db.Text
-  oneDriveUrl String
+  id               Int                      @id @default(autoincrement())
+  title            String
+  description      String                   @db.Text
+  oneDriveUrl      String
+  dueDate          DateTime
+  assignToAll      Boolean                  @default(false)
+  submissionType   SubmissionType           @default(INDIVIDUAL)
+  courseId         Int?
+  course           Course?                  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  professorId      Int
+  professor        User                     @relation("CreatedAssignments", fields: [professorId], references: [id])
+  groups           AssignmentGroup[]
+  confirmations    SubmissionConfirmation[]
+  groupSubmissions GroupSubmission[]
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
 
-  dueDate     DateTime
-  assignToAll Boolean  @default(false)
-
-  professorId Int
-  professor   User     @relation("CreatedAssignments", fields: [professorId], references: [id])
-
-  groups       AssignmentGroup[]
-  confirmations SubmissionConfirmation[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  @@index([courseId])
+  @@index([professorId])
 }
 
 model AssignmentGroup {
   id           Int        @id @default(autoincrement())
-
   assignmentId Int
   groupId      Int
-
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   group        Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@unique([assignmentId, groupId])
+  @@index([groupId])
 }
 
 model SubmissionConfirmation {
-  id            Int      @id @default(autoincrement())
-
-  assignmentId  Int
-  studentId     Int
-
-  confirmed     Boolean  @default(false)
-  confirmedAt   DateTime?
-
-  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student       User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  createdAt     DateTime @default(now())
+  id           Int        @id @default(autoincrement())
+  assignmentId Int
+  studentId    Int
+  confirmed    Boolean    @default(false)
+  confirmedAt  DateTime?
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
 
   @@unique([assignmentId, studentId])
+  @@index([studentId])
+}
+
+model GroupSubmission {
+  id            Int        @id @default(autoincrement())
+  assignmentId  Int
+  groupId       Int
+  startedById   Int
+  confirmedById Int?
+  confirmed     Boolean    @default(false)
+  startedAt     DateTime   @default(now())
+  confirmedAt   DateTime?
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  group         Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  startedBy     User       @relation("GroupSubmissionStartedBy", fields: [startedById], references: [id])
+  confirmedBy   User?      @relation("GroupSubmissionConfirmedBy", fields: [confirmedById], references: [id])
+
+  @@unique([assignmentId, groupId])
+  @@index([groupId])
 }

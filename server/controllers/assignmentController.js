@@ -9,15 +9,12 @@ const createAssignment = async (req, res) => {
       dueDate,
       assignToAll,
       groupIds,
+      courseId,
+      submissionType = "INDIVIDUAL",
     } = req.body;
 
     // Validate required fields
-    if (
-      !title ||
-      !description ||
-      !oneDriveUrl ||
-      !dueDate
-    ) {
+    if (!title || !description || !oneDriveUrl || !dueDate) {
       return res.status(400).json({
         success: false,
         message: "All assignment fields are required",
@@ -32,8 +29,7 @@ const createAssignment = async (req, res) => {
         url.protocol !== "https:" ||
         !["1drv.ms", "onedrive.live.com", "sharepoint.com"].some(
           (domain) =>
-            url.hostname === domain ||
-            url.hostname.endsWith(`.${domain}`)
+            url.hostname === domain || url.hostname.endsWith(`.${domain}`),
         )
       ) {
         throw new Error("Invalid OneDrive URL");
@@ -63,6 +59,24 @@ const createAssignment = async (req, res) => {
       });
     }
 
+    if (!["INDIVIDUAL", "GROUP"].includes(submissionType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Submission type must be INDIVIDUAL or GROUP",
+      });
+    }
+
+    const parsedCourseId =
+      courseId == null || courseId === "" ? null : Number(courseId);
+    if (
+      parsedCourseId !== null &&
+      (!Number.isInteger(parsedCourseId) || parsedCourseId <= 0)
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid course ID" });
+    }
+
     if (!assignToAll && (!Array.isArray(groupIds) || groupIds.length === 0)) {
       return res.status(400).json({
         success: false,
@@ -71,28 +85,43 @@ const createAssignment = async (req, res) => {
     }
 
     const assignment = await prisma.$transaction(async (tx) => {
+      if (parsedCourseId) {
+        const course = await tx.course.findFirst({
+          where: { id: parsedCourseId, professorId: req.user.id },
+          select: { id: true },
+        });
+        if (!course) throw new Error("COURSE_NOT_FOUND");
+      }
+
       let groups = [];
 
       if (!assignToAll) {
         const uniqueGroupIds = [...new Set(groupIds.map(Number))];
 
-        if (
-          uniqueGroupIds.some(
-            (id) => !Number.isInteger(id) || id <= 0
-          )
-        ) {
+        if (uniqueGroupIds.some((id) => !Number.isInteger(id) || id <= 0)) {
           throw new Error("INVALID_GROUP_IDS");
         }
 
         groups = await tx.group.findMany({
           where: {
             id: { in: uniqueGroupIds },
+            ...(parsedCourseId
+              ? {
+                  members: {
+                    some: {
+                      enrollments: { some: { courseId: parsedCourseId } },
+                    },
+                  },
+                }
+              : {}),
           },
           select: { id: true },
         });
 
         if (groups.length !== uniqueGroupIds.length) {
-          throw new Error("GROUP_NOT_FOUND");
+          throw new Error(
+            parsedCourseId ? "GROUP_NOT_IN_COURSE" : "GROUP_NOT_FOUND",
+          );
         }
       }
 
@@ -103,6 +132,8 @@ const createAssignment = async (req, res) => {
           oneDriveUrl,
           dueDate: parsedDueDate,
           assignToAll,
+          submissionType,
+          courseId: parsedCourseId,
           professorId: req.user.id,
           groups: {
             create: groups.map((group) => ({
@@ -111,6 +142,7 @@ const createAssignment = async (req, res) => {
           },
         },
         include: {
+          course: { select: { id: true, name: true, code: true } },
           groups: {
             include: {
               group: {
@@ -140,10 +172,24 @@ const createAssignment = async (req, res) => {
       });
     }
 
+    if (error.message === "COURSE_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found or not owned by this professor",
+      });
+    }
+
     if (error.message === "GROUP_NOT_FOUND") {
       return res.status(404).json({
         success: false,
         message: "One or more selected groups were not found",
+      });
+    }
+
+    if (error.message === "GROUP_NOT_IN_COURSE") {
+      return res.status(400).json({
+        success: false,
+        message: "Selected groups must have enrolled students in this course",
       });
     }
 
@@ -165,6 +211,8 @@ const editAssignment = async (req, res) => {
       dueDate,
       assignToAll,
       groupIds,
+      courseId,
+      submissionType = "INDIVIDUAL",
     } = req.body;
 
     if (!Number.isInteger(assignmentId) || assignmentId <= 0) {
@@ -187,6 +235,24 @@ const editAssignment = async (req, res) => {
       });
     }
 
+    if (!["INDIVIDUAL", "GROUP"].includes(submissionType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Submission type must be INDIVIDUAL or GROUP",
+      });
+    }
+
+    const parsedCourseId =
+      courseId == null || courseId === "" ? null : Number(courseId);
+    if (
+      parsedCourseId !== null &&
+      (!Number.isInteger(parsedCourseId) || parsedCourseId <= 0)
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid course ID" });
+    }
+
     // Validate OneDrive URL
     try {
       const url = new URL(oneDriveUrl);
@@ -195,8 +261,7 @@ const editAssignment = async (req, res) => {
         url.protocol !== "https:" ||
         !["1drv.ms", "onedrive.live.com", "sharepoint.com"].some(
           (domain) =>
-            url.hostname === domain ||
-            url.hostname.endsWith(`.${domain}`)
+            url.hostname === domain || url.hostname.endsWith(`.${domain}`),
         )
       ) {
         throw new Error("Invalid URL");
@@ -237,26 +302,43 @@ const editAssignment = async (req, res) => {
         return null;
       }
 
+      if (parsedCourseId) {
+        const course = await tx.course.findFirst({
+          where: { id: parsedCourseId, professorId: req.user.id },
+          select: { id: true },
+        });
+        if (!course) throw new Error("COURSE_NOT_FOUND");
+      }
+
       let uniqueGroupIds = [];
 
       if (!assignToAll) {
         uniqueGroupIds = [...new Set(groupIds.map(Number))];
 
-        if (
-          uniqueGroupIds.some(
-            (id) => !Number.isInteger(id) || id <= 0
-          )
-        ) {
+        if (uniqueGroupIds.some((id) => !Number.isInteger(id) || id <= 0)) {
           throw new Error("INVALID_GROUP_IDS");
         }
 
         const groups = await tx.group.findMany({
-          where: { id: { in: uniqueGroupIds } },
+          where: {
+            id: { in: uniqueGroupIds },
+            ...(parsedCourseId
+              ? {
+                  members: {
+                    some: {
+                      enrollments: { some: { courseId: parsedCourseId } },
+                    },
+                  },
+                }
+              : {}),
+          },
           select: { id: true },
         });
 
         if (groups.length !== uniqueGroupIds.length) {
-          throw new Error("GROUP_NOT_FOUND");
+          throw new Error(
+            parsedCourseId ? "GROUP_NOT_IN_COURSE" : "GROUP_NOT_FOUND",
+          );
         }
       }
 
@@ -268,6 +350,8 @@ const editAssignment = async (req, res) => {
           oneDriveUrl,
           dueDate: parsedDueDate,
           assignToAll,
+          submissionType,
+          courseId: parsedCourseId,
           groups: {
             deleteMany: {},
             create: uniqueGroupIds.map((groupId) => ({
@@ -276,6 +360,7 @@ const editAssignment = async (req, res) => {
           },
         },
         include: {
+          course: { select: { id: true, name: true, code: true } },
           groups: {
             include: {
               group: {
@@ -312,10 +397,24 @@ const editAssignment = async (req, res) => {
       });
     }
 
+    if (error.message === "COURSE_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found or not owned by this professor",
+      });
+    }
+
     if (error.message === "GROUP_NOT_FOUND") {
       return res.status(404).json({
         success: false,
         message: "One or more selected groups were not found",
+      });
+    }
+
+    if (error.message === "GROUP_NOT_IN_COURSE") {
+      return res.status(400).json({
+        success: false,
+        message: "Selected groups must have enrolled students in this course",
       });
     }
 
@@ -332,6 +431,7 @@ const getAllAssignments = async (req, res) => {
         professorId: req.user.id,
       },
       include: {
+        course: { select: { id: true, name: true, code: true } },
         groups: {
           include: {
             group: {
@@ -345,7 +445,16 @@ const getAllAssignments = async (req, res) => {
         _count: {
           select: {
             confirmations: true,
+            groupSubmissions: true,
           },
+        },
+        confirmations: {
+          where: { confirmed: true },
+          select: { id: true },
+        },
+        groupSubmissions: {
+          where: { confirmed: true },
+          select: { id: true },
         },
       },
       orderBy: {
@@ -534,19 +643,18 @@ const confirmSubmission = async (req, res) => {
       });
     }
 
-    const updatedConfirmation =
-      await prisma.submissionConfirmation.update({
-        where: {
-          assignmentId_studentId: {
-            assignmentId,
-            studentId,
-          },
+    const updatedConfirmation = await prisma.submissionConfirmation.update({
+      where: {
+        assignmentId_studentId: {
+          assignmentId,
+          studentId,
         },
-        data: {
-          confirmed: true,
-          confirmedAt: new Date(),
-        },
-      });
+      },
+      data: {
+        confirmed: true,
+        confirmedAt: new Date(),
+      },
+    });
 
     return res.status(200).json({
       success: true,
@@ -615,16 +723,14 @@ const getGroupProgress = async (req, res) => {
         total +
         member.confirmations.filter((confirmation) =>
           assignments.some(
-            (assignment) => assignment.id === confirmation.assignmentId
-          )
+            (assignment) => assignment.id === confirmation.assignmentId,
+          ),
         ).length,
-      0
+      0,
     );
 
     const progressPercentage =
-      totalTasks === 0
-        ? 0
-        : Math.round((completedTasks / totalTasks) * 100);
+      totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
     return res.status(200).json({
       success: true,
@@ -640,8 +746,8 @@ const getGroupProgress = async (req, res) => {
         studentId: member.studentId,
         completedAssignments: member.confirmations.filter((confirmation) =>
           assignments.some(
-            (assignment) => assignment.id === confirmation.assignmentId
-          )
+            (assignment) => assignment.id === confirmation.assignmentId,
+          ),
         ).length,
       })),
     });
@@ -693,9 +799,7 @@ const getAssignmentSubmissionStatus = async (req, res) => {
     const students = await prisma.user.findMany({
       where: {
         role: "STUDENT",
-        ...(assignment.assignToAll
-          ? {}
-          : { groupId: { in: groupIds } }),
+        ...(assignment.assignToAll ? {} : { groupId: { in: groupIds } }),
       },
       select: {
         id: true,
@@ -757,7 +861,7 @@ const getAssignmentSubmissionStatus = async (req, res) => {
     });
 
     const confirmedCount = studentStatus.filter(
-      (student) => student.status === "CONFIRMED"
+      (student) => student.status === "CONFIRMED",
     ).length;
 
     return res.status(200).json({
@@ -769,11 +873,10 @@ const getAssignmentSubmissionStatus = async (req, res) => {
       summary: {
         totalStudents: studentStatus.length,
         confirmed: confirmedCount,
-        pending: studentStatus.filter(
-          (student) => student.status === "PENDING"
-        ).length,
+        pending: studentStatus.filter((student) => student.status === "PENDING")
+          .length,
         notStarted: studentStatus.filter(
-          (student) => student.status === "NOT_STARTED"
+          (student) => student.status === "NOT_STARTED",
         ).length,
       },
       groupSummary: Object.values(groupMap),
@@ -810,7 +913,7 @@ const getProfessorAnalytics = async (req, res) => {
 
     const totalStudents = await prisma.user.count({
       where: { role: "STUDENT" },
-    });  
+    });
     const assignmentAnalytics = await Promise.all(
       assignments.map(async (assignment) => {
         const eligibleStudents = await prisma.user.findMany({
@@ -850,7 +953,7 @@ const getProfessorAnalytics = async (req, res) => {
           confirmedRecords.map((record) => [
             record.studentId,
             record.confirmedAt,
-          ])
+          ]),
         );
 
         const studentSubmissions = eligibleStudents.map((student) => {
@@ -877,23 +980,20 @@ const getProfessorAnalytics = async (req, res) => {
           completionPercentage:
             eligibleStudents.length === 0
               ? 0
-              : Math.round(
-                  (confirmed / eligibleStudents.length) * 100
-                ),
+              : Math.round((confirmed / eligibleStudents.length) * 100),
           studentSubmissions,
         };
-      })
+      }),
     );
-
 
     const totalEligible = assignmentAnalytics.reduce(
       (sum, item) => sum + item.totalStudents,
-      0
+      0,
     );
 
     const totalConfirmed = assignmentAnalytics.reduce(
       (sum, item) => sum + item.confirmed,
-      0
+      0,
     );
 
     return res.status(200).json({
@@ -929,6 +1029,5 @@ module.exports = {
   confirmSubmission,
   getGroupProgress,
   getAssignmentSubmissionStatus,
-  getProfessorAnalytics
+  getProfessorAnalytics,
 };
-

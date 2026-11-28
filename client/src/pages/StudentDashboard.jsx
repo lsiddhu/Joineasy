@@ -18,6 +18,8 @@ import {
 import { useAuth } from "../context/AuthContext";
 import Stat from "../components/StatCard";
 import ProgressBar from "../components/ProgressBar";
+import CourseCard from "../components/CourseCard";
+import { enrollInCourse, getCourses } from "../services/courseService";
 import {
   date,
   greeting,
@@ -37,13 +39,19 @@ export default function StudentDashboard() {
     }),
     [loading, setLoading] = useState(true),
     [err, setErr] = useState("");
+  const [courses, setCourses] = useState([]);
+  const [courseCode, setCourseCode] = useState("");
+  const [courseFeedback, setCourseFeedback] = useState("");
+  const [courseFeedbackType, setCourseFeedbackType] = useState("success");
+  const [enrolling, setEnrolling] = useState(false);
   const load = async () => {
     setLoading(true);
     setErr("");
-    const [g, a, p] = await Promise.allSettled([
+    const [g, a, p, c] = await Promise.allSettled([
       getMyGroup(),
       getStudentAssignments(),
       getGroupProgress(),
+      getCourses(),
     ]);
     const group = g.status === "fulfilled" ? g.value.data.group : null;
     const progress = p.status === "fulfilled" ? p.value.data : null;
@@ -54,18 +62,39 @@ export default function StudentDashboard() {
         a.status === "fulfilled" ? a.value.data.assignments || [] : [],
       progress,
     });
+    if (c.status === "fulfilled") {
+      setCourses(c.value.data.courses || []);
+    } else if (a.status === "fulfilled") {
+      setErr(errorMessage(c.reason));
+    }
     setLoading(false);
   };
   useEffect(() => {
     load();
   }, []);
   const upcoming = data.assignments.slice(0, 3);
-  const myProgress = data.progress?.members?.find(
-    (member) => member.id === user?.id,
-  );
-  const completed = myProgress?.completedAssignments;
-  const pending =
-    completed == null ? null : Math.max(data.assignments.length - completed, 0);
+  const completed = data.assignments.filter(
+    (assignment) => assignment.submissionStatus === "CONFIRMED",
+  ).length;
+  const pending = data.assignments.length - completed;
+  const enroll = async (event) => {
+    event.preventDefault();
+    setEnrolling(true);
+    setCourseFeedback("");
+    try {
+      const { data: response } = await enrollInCourse(courseCode);
+      setCourseFeedback(response.message);
+      setCourseFeedbackType("success");
+      setCourseCode("");
+      const { data: courseResponse } = await getCourses();
+      setCourses(courseResponse.courses || []);
+    } catch (error) {
+      setCourseFeedback(errorMessage(error));
+      setCourseFeedbackType("error");
+    } finally {
+      setEnrolling(false);
+    }
+  };
   if (loading) return <Loader />;
   return (
     <>
@@ -85,25 +114,17 @@ export default function StudentDashboard() {
         />
         <Stat
           label="Completed submissions"
-          value={completed ?? "—"}
+          value={completed}
           icon={FileText}
           tone="green"
-          detail={
-            completed == null
-              ? "Group progress unavailable"
-              : "Confirmed for your account"
-          }
+          detail="Confirmed for your account"
         />
         <Stat
           label="Pending submissions"
-          value={pending ?? "—"}
+          value={pending}
           icon={ClipboardList}
           tone="amber"
-          detail={
-            pending == null
-              ? "Group progress unavailable"
-              : "Awaiting confirmation"
-          }
+          detail="Awaiting confirmation"
         />
         <Stat
           label="Group progress"
@@ -113,6 +134,45 @@ export default function StudentDashboard() {
           detail={data.group?.name || "No group yet"}
         />
       </div>
+      <section className="courses-section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">YOUR LEARNING</div>
+            <h2>Enrolled courses</h2>
+            <p>Open a course to view its assignments.</p>
+          </div>
+          <form className="course-enroll-form" onSubmit={enroll}>
+            <input
+              aria-label="Course enrollment code"
+              placeholder="Enter course code"
+              value={courseCode}
+              onChange={(event) => setCourseCode(event.target.value)}
+              required
+            />
+            <button className="button secondary" disabled={enrolling}>
+              {enrolling ? "Joining..." : "Join course"}
+            </button>
+          </form>
+        </div>
+        {courseFeedback && (
+          <Notice type={courseFeedbackType}>{courseFeedback}</Notice>
+        )}
+        {courses.length ? (
+          <div className="course-grid">
+            {courses.map((course) => (
+              <CourseCard key={course.id} course={course} role="STUDENT" />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <Empty
+              title="No enrolled courses yet"
+              text="Ask your professor for a course code, then enter it above to enroll."
+              icon={ClipboardList}
+            />
+          </Card>
+        )}
+      </section>
       <div className="dashboard-grid">
         <Card className="wide">
           <div className="card-heading">

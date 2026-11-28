@@ -8,6 +8,8 @@ import {
   createAssignment,
   updateAssignment,
 } from "../services/assignmentService";
+import { getCourses } from "../services/courseService";
+import { getAllGroups } from "../services/groupService";
 
 import {
   date,
@@ -23,6 +25,7 @@ import CreateAssignment from "./CreateAssignment";
 export default function ProfessorAssignments() {
   const [items, setItems] = useState([]),
     [groups, setGroups] = useState([]),
+    [courses, setCourses] = useState([]),
     [loading, setLoading] = useState(true),
     [err, setErr] = useState(""),
     [toast, setToast] = useState(""),
@@ -37,21 +40,22 @@ export default function ProfessorAssignments() {
     dueDate: "",
     assignToAll: true,
     groupIds: [],
+    courseId: "",
+    submissionType: "INDIVIDUAL",
   };
   const [form, setForm] = useState(empty),
     [busy, setBusy] = useState(false);
   const load = async () => {
-    const { data } = await getProfessorAssignments();
-    const assignments = data.assignments || [];
+    const [assignmentResponse, courseResponse, groupResponse] =
+      await Promise.all([
+        getProfessorAssignments(),
+        getCourses(),
+        getAllGroups(),
+      ]);
+    const assignments = assignmentResponse.data.assignments || [];
     setItems(assignments);
-    const seen = new Map();
-    assignments.forEach((a) =>
-      a.groups?.forEach((x) => {
-        if (x.group)
-          seen.set(x.group.id, { ...x.group, _count: { members: 0 } });
-      }),
-    );
-    setGroups([...seen.values()]);
+    setCourses(courseResponse.data.courses || []);
+    setGroups(groupResponse.data.groups || []);
   };
   useEffect(() => {
     (async () => {
@@ -76,6 +80,8 @@ export default function ProfessorAssignments() {
       dueDate: new Date(a.dueDate).toISOString().slice(0, 16),
       assignToAll: a.assignToAll,
       groupIds: a.groups?.map((g) => g.groupId) || [],
+      courseId: a.courseId ? String(a.courseId) : "",
+      submissionType: a.submissionType || "INDIVIDUAL",
     });
     setEditing(a);
   };
@@ -87,6 +93,7 @@ export default function ProfessorAssignments() {
       ...form,
       dueDate: new Date(form.dueDate).toISOString(),
       groupIds: form.assignToAll ? [] : form.groupIds,
+      courseId: form.courseId ? Number(form.courseId) : null,
     };
     try {
       if (editing === "new") await createAssignment(payload);
@@ -105,8 +112,11 @@ export default function ProfessorAssignments() {
       setBusy(false);
     }
   };
-  const filtered = items.filter((a) =>
-    a.title.toLowerCase().includes(query.toLowerCase()),
+  const courseFilter = new URLSearchParams(location.search).get("courseId");
+  const filtered = items.filter(
+    (assignment) =>
+      assignment.title.toLowerCase().includes(query.toLowerCase()) &&
+      (!courseFilter || String(assignment.courseId) === courseFilter),
   );
   if (loading) return <Loader />;
   return (
@@ -116,16 +126,30 @@ export default function ProfessorAssignments() {
         title="Assignments"
         subtitle="Create assignments and see how your students are progressing."
         action={
-          <Button
-            onClick={() => {
-              setForm(empty);
-              setEditing("new");
-            }}
-          >
-            <Plus size={16} /> New assignment
-          </Button>
+          courses.length ? (
+            <Button
+              onClick={() => {
+                setForm(empty);
+                setEditing("new");
+              }}
+            >
+              <Plus size={16} /> New assignment
+            </Button>
+          ) : (
+            <Link className="button primary" to="/professor/courses">
+              <Plus size={16} /> Create a course first
+            </Link>
+          )
         }
       />
+      {courseFilter && (
+        <div className="course-filter-note">
+          Showing assignments for{" "}
+          {courses.find((course) => String(course.id) === courseFilter)?.name ||
+            "the selected course"}
+          .<Link to="/professor/assignments"> Clear course filter</Link>
+        </div>
+      )}
       <Notice>{err}</Notice>
       <Notice type="success">{toast}</Notice>
       <Card className="assignment-table-card">
@@ -151,9 +175,11 @@ export default function ProfessorAssignments() {
               <thead>
                 <tr>
                   <th>ASSIGNMENT</th>
+                  <th>COURSE</th>
+                  <th>TYPE</th>
                   <th>ASSIGNED TO</th>
                   <th>DUE DATE</th>
-                  <th>CONFIRMED</th>
+                  <th>ACKNOWLEDGED</th>
                   <th>STATUS</th>
                   <th />
                 </tr>
@@ -172,6 +198,14 @@ export default function ProfessorAssignments() {
                         </div>
                       </div>
                     </td>
+                    <td>{a.course?.name || "Unlinked"}</td>
+                    <td>
+                      <span
+                        className={`pill ${a.submissionType === "GROUP" ? "violet" : "blue"}`}
+                      >
+                        {a.submissionType === "GROUP" ? "Group" : "Individual"}
+                      </span>
+                    </td>
                     <td>
                       {a.assignToAll ? (
                         <span className="pill blue">All students</span>
@@ -185,7 +219,11 @@ export default function ProfessorAssignments() {
                       )}
                     </td>
                     <td>{date(a.dueDate)}</td>
-                    <td>{a._count?.confirmations || 0}</td>
+                    <td>
+                      {a.submissionType === "GROUP"
+                        ? `${a.groupSubmissions?.length || 0} groups`
+                        : `${a.confirmations?.length || 0} students`}
+                    </td>
                     <td>
                       <span
                         className={`pill ${new Date(a.dueDate) < new Date() ? "overdue" : "green"}`}
@@ -242,6 +280,7 @@ export default function ProfessorAssignments() {
           form={form}
           setForm={setForm}
           groups={groups}
+          courses={courses}
           busy={busy}
           onClose={() => setEditing(null)}
           onSubmit={submit}

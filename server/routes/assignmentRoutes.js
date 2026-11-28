@@ -5,81 +5,65 @@ const {
   createAssignment,
   editAssignment,
   getAllAssignments,
+} = require("../controllers/assignmentController");
+const {
   getStudentAssignments,
   startSubmissionConfirmation,
   confirmSubmission,
   getGroupProgress,
   getAssignmentSubmissionStatus,
   getProfessorAnalytics,
-} = require("../controllers/assignmentController");
+} = require("../controllers/submissionController");
 
-const {
-  verifyToken,
-  authorizeRole,
-} = require("../middleware/authMiddleware");
+const { verifyToken, authorizeRole } = require("../middleware/authMiddleware");
 
 // Professor-only assignment creation
-router.post(
-  "/",
-  verifyToken,
-  authorizeRole("PROFESSOR"),
-  createAssignment
-);
+router.post("/", verifyToken, authorizeRole("PROFESSOR"), createAssignment);
 // Edit assignment
-router.put(
-  "/:id",
-  verifyToken,
-  authorizeRole("PROFESSOR"),
-  editAssignment
-);
+router.put("/:id", verifyToken, authorizeRole("PROFESSOR"), editAssignment);
 // View all assignments created by the professor
-router.get(
-  "/",
-  verifyToken,
-  authorizeRole("PROFESSOR"),
-  getAllAssignments
-);
+router.get("/", verifyToken, authorizeRole("PROFESSOR"), getAllAssignments);
 
 router.get(
   "/student",
   verifyToken,
   authorizeRole("STUDENT"),
-  getStudentAssignments
-)
+  getStudentAssignments,
+);
 
 router.post(
   "/:id/submission/start",
   verifyToken,
   authorizeRole("STUDENT"),
-  startSubmissionConfirmation
-)
+  startSubmissionConfirmation,
+);
 //
 router.post(
   "/:id/submission/confirm",
   verifyToken,
   authorizeRole("STUDENT"),
-  confirmSubmission
-)
+  confirmSubmission,
+);
 //
 router.get(
   "/student/group-progress",
   verifyToken,
   authorizeRole("STUDENT"),
-  getGroupProgress
-)
+  getGroupProgress,
+);
 //
 router.get(
   "/:id/submission-status",
   verifyToken,
   authorizeRole("PROFESSOR"),
-  getAssignmentSubmissionStatus
-)
+  getAssignmentSubmissionStatus,
+);
 //
 router.get(
   "/professor/analytics",
   verifyToken,
   authorizeRole("PROFESSOR"),
-  getProfessorAnalytics
-)
+  getProfessorAnalytics,
+);
 
 module.exports = router;

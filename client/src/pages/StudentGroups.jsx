@@ -258,12 +258,13 @@ export default function StudentGroups() {
                       <div key={m.id} className="member-progress-row">
                         <span>{m.name}</span>
                         <span>
-                          {m.completedAssignments}/{progress.totalAssignments}
+                          {m.completedAssignments}/
+                          {m.totalAssignments ?? progress.totalAssignments}
                         </span>
                         <div className="progress-track">
                           <i
                             style={{
-                              width: `${progress.totalAssignments ? (m.completedAssignments / progress.totalAssignments) * 100 : 0}%`,
+                              width: `${(m.totalAssignments ?? progress.totalAssignments) ? (m.completedAssignments / (m.totalAssignments ?? progress.totalAssignments)) * 100 : 0}%`,
                             }}
                           />
                         </div>

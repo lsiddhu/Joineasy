@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { ClipboardList } from "lucide-react";
 
 import { errorMessage } from "../services/api";
+import { getMyGroup } from "../services/groupService";
+import { getCourse } from "../services/courseService";
 import {
   getStudentAssignments,
   startSubmission,
@@ -10,7 +13,6 @@ import {
 } from "../services/assignmentService";
 
 import {
-  Button,
   Notice,
   Loader,
   PageTitle,
@@ -23,6 +25,10 @@ import { useAuth } from "../context/AuthContext";
 
 export default function StudentAssignments() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const courseId = searchParams.get("courseId");
+  const [course, setCourse] = useState(null);
+  const [group, setGroup] = useState(null);
   const [items, setItems] = useState([]),
     [loading, setLoading] = useState(true),
     [err, setErr] = useState(""),
@@ -48,19 +54,34 @@ export default function StudentAssignments() {
       return next;
     });
   const load = async () => {
-    try {
-      const { data } = await getStudentAssignments();
-      setItems(data.assignments || []);
+    const requests = [
+      getStudentAssignments(courseId),
+      getMyGroup(),
+      ...(courseId ? [getCourse(courseId)] : []),
+    ];
+    const [assignmentResult, groupResult, courseResult] =
+      await Promise.allSettled(requests);
+
+    if (assignmentResult.status === "fulfilled") {
+      setItems(assignmentResult.value.data.assignments || []);
       setErr("");
-    } catch (e) {
-      setErr(errorMessage(e));
-    } finally {
-      setLoading(false);
+    } else {
+      setErr(errorMessage(assignmentResult.reason));
     }
+
+    setGroup(
+      groupResult.status === "fulfilled" ? groupResult.value.data.group : null,
+    );
+    setCourse(
+      courseId && courseResult?.status === "fulfilled"
+        ? courseResult.value.data.course
+        : null,
+    );
+    setLoading(false);
   };
   useEffect(() => {
     load();
-  }, []);
+  }, [courseId]);
   const start = async (a) => {
     setBusy(a.id);
     setErr("");
@@ -88,7 +109,10 @@ export default function StudentAssignments() {
       const { data } = await confirmSubmission(step.id);
       persistState(step.id, {
         status: "CONFIRMED",
-        confirmedAt: data.confirmation?.confirmedAt || new Date().toISOString(),
+        confirmedAt:
+          data.submission?.confirmedAt ||
+          data.confirmation?.confirmedAt ||
+          new Date().toISOString(),
       });
       setStep(null);
       await load();
@@ -110,8 +134,12 @@ export default function StudentAssignments() {
     <>
       <PageTitle
         eyebrow="YOUR WORK"
-        title="Assignments"
-        subtitle="Find the resources you need and confirm your submissions."
+        title={course?.name ? `${course.name} assignments` : "Assignments"}
+        subtitle={
+          course?.name
+            ? "Assignments and submission progress for this course."
+            : "Find the resources you need and confirm your submissions."
+        }
       />
       <Notice>{err}</Notice>
       <div className="filter-bar">
@@ -138,16 +166,30 @@ export default function StudentAssignments() {
       </div>
       {shown.length ? (
         <div className="student-assignment-grid">
-          {shown.map((a) => (
-            <AssignmentCard
-              key={a.id}
-              assignment={a}
-              start={() => start(a)}
-              busy={busy === a.id}
-              status={submissionStates[a.id]?.status || "NOT_STARTED"}
-              confirmedAt={submissionStates[a.id]?.confirmedAt}
-            />
-          ))}
+          {shown.map((assignment) => {
+            const isGroupAssignment = assignment.submissionType === "GROUP";
+            const isGroupLeader = group?.leaderId === user?.id;
+
+            return (
+              <AssignmentCard
+                key={assignment.id}
+                assignment={assignment}
+                start={() => start(assignment)}
+                busy={busy === assignment.id}
+                status={
+                  assignment.submissionStatus ||
+                  submissionStates[assignment.id]?.status ||
+                  "NOT_STARTED"
+                }
+                confirmedAt={
+                  assignment.confirmedAt ||
+                  submissionStates[assignment.id]?.confirmedAt
+                }
+                isGroupAssignment={isGroupAssignment}
+                canConfirm={!isGroupAssignment || isGroupLeader}
+              />
+            );
+          })}
         </div>
       ) : (
         <Card>

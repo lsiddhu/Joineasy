@@ -16,6 +16,7 @@ import ProfessorDashboard from "./pages/ProfessorDashboard";
 import ProfessorAssignments from "./pages/ProfessorAssignments";
 import AssignmentDetails from "./pages/AssignmentDetails";
 import ProfessorAnalytics from "./pages/ProfessorAnalytics";
+import ProfessorCourses from "./pages/ProfessorCourses";
 
 import { routes } from "./components/Common";
 
@@ -59,6 +60,8 @@ export default function App() {
           <Route path="dashboard" element={<ProfessorDashboard />} />
 
           <Route path="assignments" element={<ProfessorAssignments />} />
+
+          <Route path="courses" element={<ProfessorCourses />} />
 
           <Route path="assignments/:id" element={<AssignmentDetails />} />
 

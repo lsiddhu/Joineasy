@@ -1,4 +1,10 @@
-import { X, LoaderCircle, FileText, ExternalLink } from "lucide-react";
+import {
+  CheckCircle2,
+  X,
+  LoaderCircle,
+  FileText,
+  ExternalLink,
+} from "lucide-react";
 export const routes = {
   STUDENT: "/student/dashboard",
   PROFESSOR: "/professor/dashboard",
@@ -82,6 +88,8 @@ export function AssignmentCard({
   busy,
   status = "NOT_STARTED",
   confirmedAt,
+  isGroupAssignment = false,
+  canConfirm = true,
 }) {
   const confirmed = status === "CONFIRMED";
   const pending = status === "PENDING";
@@ -91,17 +99,29 @@ export function AssignmentCard({
         <span className="file-icon">
           <FileText size={18} />
         </span>
-        <span
-          className={`pill ${confirmed ? "green" : pending ? "amber" : new Date(a.dueDate) < new Date() ? "overdue" : "blue"}`}
-        >
-          {confirmed
-            ? "Confirmed"
-            : pending
-              ? "Pending confirmation"
-              : new Date(a.dueDate) < new Date()
-                ? "Past due"
-                : "Not started"}
-        </span>
+        <div className="assignment-badges">
+          <span
+            className={`pill ${a.submissionType === "GROUP" ? "violet" : "blue"}`}
+          >
+            {a.submissionType === "GROUP" ? "Group" : "Individual"}
+          </span>
+          <span
+            className={`pill ${confirmed ? "green" : pending ? "amber" : new Date(a.dueDate) < new Date() ? "overdue" : "blue"}`}
+          >
+            {confirmed ? (
+              <>
+                <CheckCircle2 size={12} className="confirmation-check" />{" "}
+                Confirmed
+              </>
+            ) : pending ? (
+              "Pending confirmation"
+            ) : new Date(a.dueDate) < new Date() ? (
+              "Past due"
+            ) : (
+              "Not started"
+            )}
+          </span>
+        </div>
       </div>
       <h3>{a.title}</h3>
       <p className="assignment-description">{a.description}</p>
@@ -122,6 +142,11 @@ export function AssignmentCard({
           Confirmed {new Date(confirmedAt).toLocaleString()}
         </div>
       )}
+      {isGroupAssignment && !canConfirm && (
+        <div className="group-leader-note">
+          Your group leader must confirm this submission.
+        </div>
+      )}
       <div className="assignment-actions">
         <a
           href={a.oneDriveUrl}
@@ -131,14 +156,16 @@ export function AssignmentCard({
         >
           Open OneDrive <ExternalLink size={15} />
         </a>
-        <Button disabled={confirmed || busy} onClick={start}>
+        <Button disabled={confirmed || busy || !canConfirm} onClick={start}>
           {busy
             ? "Starting…"
             : confirmed
               ? "Submitted"
-              : pending
-                ? "Continue confirmation"
-                : "Yes, I have submitted"}
+              : !canConfirm
+                ? "Waiting for group leader"
+                : pending
+                  ? "Continue confirmation"
+                  : "Yes, I have submitted"}
         </Button>
       </div>
     </Card>

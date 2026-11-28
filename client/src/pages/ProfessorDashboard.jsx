@@ -23,6 +23,8 @@ import {
   getProfessorAnalytics,
 } from "../services/assignmentService";
 import Stat from "../components/StatCard";
+import CourseCard from "../components/CourseCard";
+import { getCourses } from "../services/courseService";
 
 import {
   date,
@@ -37,13 +39,19 @@ import {
 export default function ProfessorDashboard() {
   const [analytics, setAnalytics] = useState(null),
     [assignments, setAssignments] = useState([]),
+    [courses, setCourses] = useState([]),
     [loading, setLoading] = useState(true),
     [err, setErr] = useState("");
   useEffect(() => {
-    Promise.all([getProfessorAnalytics(), getProfessorAssignments()])
-      .then(([a, b]) => {
+    Promise.all([
+      getProfessorAnalytics(),
+      getProfessorAssignments(),
+      getCourses(),
+    ])
+      .then(([a, b, c]) => {
         setAnalytics(a.data);
         setAssignments(b.data.assignments || []);
+        setCourses(c.data.courses || []);
       })
       .catch((e) => setErr(errorMessage(e)))
       .finally(() => setLoading(false));
@@ -113,6 +121,37 @@ export default function ProfessorDashboard() {
           detail="Across eligible submissions"
         />
       </div>
+      <section className="courses-section">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">TEACHING</div>
+            <h2>Courses you teach</h2>
+            <p>Course enrollment and submission progress at a glance.</p>
+          </div>
+          <Link className="button secondary" to="/professor/courses">
+            Manage courses
+          </Link>
+        </div>
+        {courses.length ? (
+          <div className="course-grid">
+            {courses.map((course) => (
+              <CourseCard key={course.id} course={course} role="PROFESSOR" />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <Empty
+              title="Create your first course"
+              text="Courses organize assignments and give students an enrollment code."
+              action={
+                <Link className="button primary" to="/professor/courses">
+                  Create course
+                </Link>
+              }
+            />
+          </Card>
+        )}
+      </section>
       <div className="dashboard-grid">
         <Card className="wide chart-card">
           <div className="card-heading">
